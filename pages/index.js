@@ -109,7 +109,7 @@ export default function Home() {
         <button className="" onClick={getBalance}>
           GET cDAI Balance
         </button>
-        <h3 className=" ">{cDaiBalance}</h3>
+        <h3 className=" ">{cDaiBalance / 10 ** 8}</h3>
         {currentAccount === "" ? (
           <button className="" onClick={connectWallet}>
             Connect Wallet
