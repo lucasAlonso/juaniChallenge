@@ -10,28 +10,53 @@ export default function Home() {
   const [currentAccount, setCurrentAccount] = useState("");
   const [correctNetwork, setCorrectNetwork] = useState(false);
   const [cDaiBalance, setcDaiBalance] = useState(null);
+  const [daiAmount, setdaiAmount] = useState("");
+  const abi = require("./cTokenAbi.json");
+  const erc20Abi = require("./erc20Abi.json");
+  const cTokenAddress = "0xF0d0EB522cfa50B716B3b1604C4F0fA6f04376AD";
+  const underlayingContractAddress =
+    "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa";
+  const { Contract } = require("ethers");
 
-  const minABI = [
-    // balanceOf
-    {
-      constant: true,
-      inputs: [{ name: "_owner", type: "address" }],
-      name: "balanceOf",
-      outputs: [{ name: "balance", type: "uint256" }],
-      type: "function",
-    },
-  ];
+  const assetName = "DAI"; // for the log output lines
+  const underlyingDecimals = 18; // Number of decimals defined in this ERC20 token's contract
+
   const options = {
-    address: "00x59a3A34C45064E92fE540CC8a6a3929d1Db23261", // your (target) address
+    address: currentAccount, // your (target) address
     provider: ethers.getDefaultProvider("kovan"), // network = mainnet/testnet/etc (you can omit network if your target is mainnet)
   };
-  const { Contract } = require("ethers");
-  const tokenAddress = "0xF0d0EB522cfa50B716B3b1604C4F0fA6f04376AD";
 
   const getBalance = async () => {
-    const contract = new Contract(tokenAddress, minABI, options.provider);
-    const balance = await contract.balanceOf(currentAccount);
+    const contract = new Contract(cTokenAddress, abi, options.provider);
+    const balance = await contract.callStatic.balanceOfUnderlying(
+      currentAccount
+    );
     setcDaiBalance(balance.toString());
+  };
+
+  const depositDAI = async () => {
+    const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+    const signer = provider.getSigner();
+    const underlyingContract = new Contract(
+      underlayingContractAddress,
+      erc20Abi,
+      signer
+    );
+    const cTokenContract = new Contract(cTokenAddress, abi, signer);
+    const underlyingTokensToSupply =
+      daiAmount * Math.pow(10, underlyingDecimals);
+    let tx = await underlyingContract.approve(
+      cTokenAddress,
+      underlyingTokensToSupply.toString()
+    );
+    await tx.wait(1); // wait until the transaction has 1 confirmation on the blockchain
+
+    console.log(`${assetName} contract "Approve" operation successful.`);
+    console.log(`Supplying ${assetName} to the Compound Protocol...`, "\n");
+
+    // Mint cTokens by supplying underlying tokens to the Compound Protocol
+    tx = await cTokenContract.mint(underlyingTokensToSupply.toString());
+    await tx.wait(1); // wait until the transaction has 1 confirmation on the blockchain
   };
 
   const checkIfWalletIsConnected = async () => {
@@ -106,10 +131,23 @@ export default function Home() {
       <main className={styles.main}>
         la mejor Dapp del mundo
         <h2 className=" ">CONECT</h2>
-        <button className="" onClick={getBalance}>
+        <button className="button-54" onClick={getBalance}>
           GET cDAI Balance
         </button>
-        <h3 className=" ">{cDaiBalance / 10 ** 8}</h3>
+        <h3 className=" ">{cDaiBalance / Math.pow(10, underlyingDecimals)}</h3>
+        <input
+          className="inputs"
+          maxlength="5"
+          onKeyPress={(event) => {
+            if (!/[0-9]/.test(event.key)) {
+              event.preventDefault();
+            }
+          }}
+          onInput={(e) => setdaiAmount(e.target.value)}
+        />
+        <button className="button-54" onClick={depositDAI}>
+          deposit DAI
+        </button>
         {currentAccount === "" ? (
           <button className="" onClick={connectWallet}>
             Connect Wallet
