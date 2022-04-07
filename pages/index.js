@@ -3,6 +3,7 @@ import Image from "next/image";
 import styles from "../styles/Home.module.css";
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import { createClient } from "urql";
 
 export default function Home() {
   const [loadingState, setLoadingState] = useState(0);
@@ -24,6 +25,34 @@ export default function Home() {
   const options = {
     address: currentAccount, // your (target) address
     provider: ethers.getDefaultProvider("kovan"), // network = mainnet/testnet/etc (you can omit network if your target is mainnet)
+  };
+  const APIURL =
+    "https://api.thegraph.com/subgraphs/name/juanigallo/cdai-kovan-subgraph";
+
+  const getGraphData = async () => {
+    const tokensQuery = `
+    query {
+      
+      mintEntities(where:{address:"${currentAccount}"}) {
+        id
+        address
+        amount
+        tokens
+      }
+      redeemEntities(where:{address:"${currentAccount}"}) {
+        id
+        address
+        amount
+        tokens
+      }
+      
+    }`;
+    const client = createClient({
+      url: APIURL,
+    });
+
+    const data = await client.query(tokensQuery).toPromise();
+    console.log(data);
   };
 
   const getBalance = async () => {
@@ -147,6 +176,9 @@ export default function Home() {
         />
         <button className="button-54" onClick={depositDAI}>
           deposit DAI
+        </button>
+        <button className="button-54" onClick={getGraphData}>
+          GET graphData
         </button>
         {currentAccount === "" ? (
           <button className="" onClick={connectWallet}>
