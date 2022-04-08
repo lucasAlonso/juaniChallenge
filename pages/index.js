@@ -1,17 +1,15 @@
-import Head from "next/head";
-import Image from "next/image";
 import styles from "../styles/Home.module.css";
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { createClient } from "urql";
 
 export default function Home() {
-  const [loadingState, setLoadingState] = useState(0);
-  const [txError, setTxError] = useState(null);
   const [currentAccount, setCurrentAccount] = useState("");
   const [correctNetwork, setCorrectNetwork] = useState(false);
   const [cDaiBalance, setcDaiBalance] = useState(null);
   const [daiAmount, setdaiAmount] = useState("");
+  const [graphDataMint, setGraphDataMint] = useState("");
+  const [graphDataRedeem, setGraphDataRedeem] = useState("");
   const abi = require("./cTokenAbi.json");
   const erc20Abi = require("./erc20Abi.json");
   const cTokenAddress = "0xF0d0EB522cfa50B716B3b1604C4F0fA6f04376AD";
@@ -51,8 +49,14 @@ export default function Home() {
       url: APIURL,
     });
 
-    const data = await client.query(tokensQuery).toPromise();
-    console.log(data);
+    const { data } = await client.query(tokensQuery).toPromise();
+    if (data.mintEntities.length > 0) {
+      setGraphDataMint(data.mintEntities);
+    }
+    if (data.redeemEntities.length > 0) {
+      setGraphDataRedeem(data.redeemEntities);
+      console.log("holas");
+    }
   };
 
   const getBalance = async () => {
@@ -106,7 +110,6 @@ export default function Home() {
     }
   };
 
-  // Calls Metamask to connect wallet on clicking Connect Wallet button
   const connectWallet = async () => {
     try {
       const { ethereum } = window;
@@ -136,7 +139,6 @@ export default function Home() {
     }
   };
 
-  // Checks if wallet is connected to the correct network
   const checkCorrectNetwork = async () => {
     const { ethereum } = window;
     let chainId = await ethereum.request({ method: "eth_chainId" });
@@ -193,6 +195,40 @@ export default function Home() {
             <div>and reload the page</div>
             <div>----------------------------------------</div>
           </div>
+        )}
+        {graphDataMint ? (
+          <div className="tables">
+            <div>
+              DAI Deposits History
+              <tr>
+                <th>DAI AMOUNT</th>
+                <th>Tokens AMOUNT</th>
+              </tr>
+              {graphDataMint.map((entiti) => (
+                <tr style={{ color: "green" }}>
+                  <th>{entiti.amount / Math.pow(10, underlyingDecimals)}</th>
+                  <th>{entiti.tokens}</th>
+                </tr>
+              ))}{" "}
+            </div>
+          </div>
+        ) : (
+          <div></div>
+        )}
+        {graphDataRedeem ? (
+          <div className="tables">
+            <div>
+              DAI Withdraws History
+              {graphDataRedeem.map((entiti) => (
+                <tr style={{ color: "red" }}>
+                  <th>{entiti.amount / Math.pow(10, underlyingDecimals)}</th>
+                  <th>{entiti.tokens}</th>
+                </tr>
+              ))}{" "}
+            </div>
+          </div>
+        ) : (
+          <div></div>
         )}
       </main>
       <footer className={styles.footer}>viva peron</footer>
